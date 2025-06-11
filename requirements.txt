@@ -1,0 +1,3 @@
+mcp
+simple-salesforce
+python-dotenv
