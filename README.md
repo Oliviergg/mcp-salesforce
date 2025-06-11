@@ -15,16 +15,14 @@
 - Handles errors and connection issues gracefully.
 
 ## Configuration
-Claude need this type of configuration
+A standard version to use it, is to setup your claude mcp configuration file like this :
 ```
     {
         "mcpServers": {
             "salesforce": {
                 "command": "uvx",
                 "args": [
-                    "--from",
                     "mcp-salesforce",
-                    "salesforce"
                 ],
                 "env": {
                     "SALESFORCE_INSTANCE_URL": "YOUR DOMAIN"
@@ -36,3 +34,5 @@ Claude need this type of configuration
         }
     }
 ```
+
+You can also use it with simonw/llm cli utils.
