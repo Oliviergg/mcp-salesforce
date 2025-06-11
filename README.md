@@ -25,7 +25,7 @@ A standard version to use it, is to setup your claude mcp configuration file lik
                     "mcp-salesforce",
                 ],
                 "env": {
-                    "SALESFORCE_INSTANCE_URL": "YOUR DOMAIN"
+                    "SALESFORCE_INSTANCE_URL": "YOUR DOMAIN" (login | test | your custom domain)
                     "SALESFORCE_USERNAME": "YOUR_SALESFORCE_USERNAME",
                     "SALESFORCE_PASSWORD": "YOUR_SALESFORCE_PASSWORD",
                     "SALESFORCE_SECURITY_TOKEN": "YOUR_SALESFORCE_SECURITY_TOKEN"
