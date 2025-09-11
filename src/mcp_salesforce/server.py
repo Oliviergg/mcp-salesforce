@@ -14,6 +14,33 @@ mcp = FastMCP("salesforce")
 # Load environment variables
 load_dotenv()
 
+def format_sobject_metadata_for_llm(metadata: Dict) -> str:
+    """Format the metadata for optimal use with an LLM."""
+    output = ""
+    # output += f"# {metadata['object_name']} ({metadata['label']})\n\n"
+    # output += "Fields\n\n"
+    
+    for field in metadata['fields']:
+        output += f"{field.get('name', '')} : {field.get('label', '')}\n"
+        output += f"- Type: {field.get('type', '')}({field.get('length', '')})"
+        if field.get('type') == 'reference':
+            output += f" to {', '.join(field.get('referenceTo', []))}"
+            output += f" via {field['relationshipName']}"
+            output += "\n"
+        else:
+            output += "\n"
+        if field.get('description'):
+            output += f"- Description: {field['description']}\n"
+        if field.get('required'):
+            output += "- Required: Yes\n"
+        if field.get('picklistValues'):
+            values = ', '.join([v['value'] for v in field['picklistValues']])
+            output += f"- Possible values: {values}\n"
+        output += "\n"
+    
+    return output
+
+
 class SalesforceClient:
     """Handles Salesforce operations and caching."""
     
@@ -28,12 +55,14 @@ class SalesforceClient:
             bool: True if connection successful, False otherwise
         """
         try:
-            print(os.getenv('SALESFORCE_INSTANCE_URL', 'https://login.salesforce.com'))
-            print(os.getenv('SALESFORCE_USERNAME'))
-            print(os.getenv('SALESFORCE_PASSWORD'))
-            print(os.getenv('SALESFORCE_SECURITY_TOKEN'))
+            domain = os.getenv('SALESFORCE_INSTANCE_URL')
+            if domain is None:
+                domain = 'test'
+            elif domain not in ['login', 'test'] and not domain.endswith('.my'):
+                domain = f"{domain}.my"
+            print(f"Salesforce domain: {domain}")
             self.sf = Salesforce(
-                domain='test',
+                domain=domain,
                 username=os.getenv('SALESFORCE_USERNAME'),
                 password=os.getenv('SALESFORCE_PASSWORD'),
                 security_token=os.getenv('SALESFORCE_SECURITY_TOKEN')
@@ -45,31 +74,17 @@ class SalesforceClient:
     
     def get_object_fields(self, object_name: str) -> str:
         """Retrieves field Names, labels and types for a specific Salesforce object.
+        if there is a lookup, the type is reference.
+        - Type: `reference(18)` to LookupTable via LookupField
 
         Args:
             object_name (str): The name of the Salesforce object.
 
         Returns:
-            str: JSON representation of the object fields.
+            str: a markdown formatted string with the object fields.
         """
-        if not self.sf:
-            raise ValueError("Salesforce connection not established.")
-        if object_name not in self.sobjects_cache:
-            sf_object = getattr(self.sf, object_name)
-            fields = sf_object.describe()['fields']
-            filtered_fields = []
-            for field in fields:
-                filtered_fields.append({
-                    'label': field['label'],
-                    'name': field['name'],
-                    'updateable': field['updateable'],
-                    'type': field['type'],
-                    'length': field['length'],
-                    'picklistValues': field['picklistValues']
-                })
-            self.sobjects_cache[object_name] = filtered_fields
-            
-        return json.dumps(self.sobjects_cache[object_name], indent=2)
+        response = self.sf.restful(f'sobjects/{object_name}/describe')
+        return format_sobject_metadata_for_llm(response)
 
 
 @mcp.tool()
@@ -107,8 +122,10 @@ async def run_sosl_search(search: str) -> str:
         return f"Error executing SOSL search: {str(e)}"
 
 @mcp.tool()
-async def get_object_fields(object_name: str) -> str:
+async def get_sobject_fields(object_name: str) -> str:
     """Retrieves field Names, labels and types for a specific Salesforce object.
+        if there is a lookup, the type is reference with the lookup table name and the fields name.
+
     Args:
         object_name: The name of the Salesforce object (e.g., 'Account', 'Contact')
     """
@@ -237,6 +254,8 @@ async def restful(path: str, method: str = "GET", params: Optional[Dict[str, Any
         return f"RESTful API Call Result:\n{json.dumps(results, indent=2)}"
     except Exception as e:
         return f"Error making REST API call: {str(e)}"
+
+
 
 def main():
     # Initialize Salesforce client

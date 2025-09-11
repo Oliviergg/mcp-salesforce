@@ -9,3 +9,7 @@ wheels/
 
 
 venv/
+config.json
+.DS_Store
+.env
+sandbox.ipynb
