@@ -12,4 +12,5 @@ venv/
 config.json
 .DS_Store
 .env
+.env.*
 sandbox.ipynb
